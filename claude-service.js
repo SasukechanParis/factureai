@@ -1,7 +1,7 @@
 // FacturAI — Claude Service
 // Calls the Vercel serverless proxy which securely calls Anthropic Claude API
 
-const VERCEL_API_URL = 'https://factureai-api.vercel.app/api/generate';
+const VERCEL_API_URL = 'https://factureai-topaz.vercel.app/api/generate';
 
 /**
  * Generate a professional French invoice text via Claude AI.
