@@ -1,0 +1,28 @@
+{
+  "name": "FacturAI — Factures pour micro-entrepreneurs",
+  "short_name": "FacturAI",
+  "description": "Créez vos factures conformes en 30 secondes grâce à l'IA",
+  "lang": "fr-FR",
+  "start_url": "/factureai/",
+  "scope": "/factureai/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "productivity"],
+  "screenshots": []
+}

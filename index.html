@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>FacturAI — Factures pour micro-entrepreneurs</title>
+  <meta name="description" content="Créez vos factures conformes en 30 secondes grâce à l'IA. Pour micro-entrepreneurs français." />
+  <meta name="theme-color" content="#2563EB" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="FacturAI" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- jsPDF CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LOADING OVERLAY
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TOAST CONTAINER
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="toast-container" aria-live="polite"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LOGIN SCREEN
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="login-screen" class="view active">
+  <div class="login-card">
+    <div class="login-logo">Factur<span>AI</span></div>
+    <p class="login-tagline">Créez vos factures conformes en 30 secondes</p>
+
+    <ul class="login-value-props">
+      <li>Factures légalement conformes générées par IA</li>
+      <li>Toutes les mentions obligatoires françaises</li>
+      <li>PDF professionnel téléchargeable en un clic</li>
+      <li>Historique et gestion de vos clients</li>
+    </ul>
+
+    <button id="btn-google-signin" class="btn-google">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+      Se connecter avec Google
+    </button>
+
+    <p class="login-disclaimer">En vous connectant, vous acceptez nos conditions d'utilisation.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ONBOARDING MODAL
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="onboarding-modal" class="modal-backdrop">
+  <div class="modal" style="position:relative;">
+    <div class="modal-handle"></div>
+    <h2 class="modal-title">Finalisez votre profil</h2>
+    <p class="text-muted mb-2">Ces informations apparaîtront sur toutes vos factures.</p>
+
+    <form id="form-onboarding">
+      <div class="form-row">
+        <label for="ob-nom">Nom / Raison sociale *</label>
+        <input type="text" id="ob-nom" placeholder="Jean Dupont ou Ma Société" required />
+      </div>
+      <div class="form-row">
+        <label for="ob-siret">Numéro SIRET (14 chiffres) *</label>
+        <input type="text" id="ob-siret" placeholder="12345678901234" maxlength="14" inputmode="numeric" required />
+      </div>
+      <div class="form-row">
+        <label for="ob-adresse">Adresse complète *</label>
+        <textarea id="ob-adresse" placeholder="123 rue de la Paix, 75001 Paris" rows="2" required></textarea>
+      </div>
+      <div class="form-row">
+        <label for="ob-telephone">Téléphone *</label>
+        <input type="tel" id="ob-telephone" placeholder="06 12 34 56 78" required />
+      </div>
+      <div class="form-row">
+        <label for="ob-iban">IBAN (optionnel — affiché sur les factures)</label>
+        <input type="text" id="ob-iban" placeholder="FR76 1234 5678 9012 3456 7890 123" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full mt-2">
+        Commencer à facturer →
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     APP HEADER (shared across all views except login)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<header class="app-header" id="app-header" style="display:none;">
+  <div class="logo">Factur<span>AI</span></div>
+
+  <!-- Desktop nav -->
+  <nav class="desktop-nav" style="display:none;">
+    <button class="nav-link" data-view="view-dashboard">Tableau de bord</button>
+    <button class="nav-link" data-view="view-new-document">Nouvelle facture</button>
+    <button class="nav-link" data-view="view-documents">Documents</button>
+    <button class="nav-link" data-view="view-clients">Clients</button>
+    <button class="nav-link" data-view="view-profile">Profil</button>
+  </nav>
+
+  <div class="header-actions">
+    <img id="user-avatar" src="" alt="Avatar" class="avatar" style="display:none;" />
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIEW: DASHBOARD
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-dashboard" class="view">
+  <div class="page-content">
+
+    <!-- Welcome -->
+    <div style="margin-bottom:1.25rem;">
+      <p class="text-muted text-sm">Bonjour,</p>
+      <h1 style="font-size:1.35rem;font-weight:800;line-height:1.2;" id="dash-user-name">—</h1>
+    </div>
+
+    <!-- Stats cards -->
+    <div class="stats-grid">
+      <div class="stat-card primary">
+        <div class="stat-label">Ce mois</div>
+        <div class="stat-value" id="dash-doc-count">0/30</div>
+        <div class="usage-bar-wrap">
+          <div class="usage-bar" id="dash-usage-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Dernière</div>
+        <div class="stat-value" style="font-size:0.9rem;" id="dash-last-doc">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Clients</div>
+        <div class="stat-value" id="dash-client-count">0</div>
+      </div>
+    </div>
+
+    <!-- Quick action -->
+    <button class="quick-action" id="btn-quick-new">
+      <div>
+        <div class="qa-title">+ Nouvelle facture</div>
+        <div class="qa-sub">Générée par IA en 30 secondes ✨</div>
+      </div>
+      <div class="qa-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </div>
+    </button>
+
+    <!-- Recent documents -->
+    <p class="section-title">Documents récents</p>
+    <div class="card" id="recent-docs-list">
+      <div class="card-empty">
+        <span class="empty-icon">📄</span>
+        Aucun document pour l'instant.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIEW: NEW DOCUMENT (Wizard)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-new-document" class="view">
+  <div class="page-content">
+
+    <!-- Step header -->
+    <div class="step-header">
+      <div class="step-indicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+      <h2 class="step-title" id="wiz-step-title">Type de document</h2>
+      <p class="step-subtitle" id="wiz-step-sub">Choisissez ce que vous souhaitez créer</p>
+    </div>
+
+    <!-- ── Step 1: Type ── -->
+    <div class="step-panel active" id="step-1">
+      <div class="type-grid">
+        <div class="type-card selected" data-type="facture">
+          <span class="type-emoji">🧾</span>
+          <div class="type-name">Facture</div>
+          <div class="type-sub">Paiement dû</div>
+        </div>
+        <div class="type-card disabled" data-type="devis">
+          <span class="type-emoji">📋</span>
+          <div class="type-name">Devis</div>
+          <div class="type-sub">Bientôt</div>
+        </div>
+        <div class="type-card disabled" data-type="contrat">
+          <span class="type-emoji">📝</span>
+          <div class="type-name">Contrat</div>
+          <div class="type-sub">Bientôt</div>
+        </div>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-primary" id="wiz-next-1">
+          Suivant →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Step 2: Client ── -->
+    <div class="step-panel" id="step-2">
+      <div class="form-row">
+        <label for="wiz-client-select">Client *</label>
+        <div class="client-select-row">
+          <select id="wiz-client-select">
+            <option value="">-- Sélectionner un client --</option>
+          </select>
+          <button class="btn btn-secondary" id="btn-add-client-inline" type="button">+ Nouveau</button>
+        </div>
+      </div>
+
+      <!-- Inline new client form -->
+      <div class="inline-form" id="inline-client-form">
+        <div class="inline-form-title">Nouveau client</div>
+        <div class="form-row">
+          <label for="ic-nom">Nom / Raison sociale *</label>
+          <input type="text" id="ic-nom" placeholder="Acme Corp" />
+        </div>
+        <div class="form-row">
+          <label for="ic-adresse">Adresse *</label>
+          <textarea id="ic-adresse" placeholder="1 rue du Commerce, 75001 Paris" rows="2"></textarea>
+        </div>
+        <div class="form-row-2">
+          <div>
+            <label for="ic-email">Email</label>
+            <input type="email" id="ic-email" placeholder="contact@client.fr" />
+          </div>
+          <div>
+            <label for="ic-siret">SIRET client</label>
+            <input type="text" id="ic-siret" placeholder="14 chiffres" maxlength="14" inputmode="numeric" />
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-save-inline-client" type="button">Ajouter ce client</button>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" id="wiz-back-2">← Retour</button>
+        <button class="btn btn-primary" id="wiz-next-2">Suivant →</button>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Details ── -->
+    <div class="step-panel" id="step-3">
+      <div class="form-row-2">
+        <div>
+          <label for="wiz-date-emission">Date d'émission *</label>
+          <input type="date" id="wiz-date-emission" />
+        </div>
+        <div>
+          <label for="wiz-date-echeance">Date d'échéance *</label>
+          <input type="date" id="wiz-date-echeance" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="wiz-description">Description de la prestation *</label>
+        <textarea id="wiz-description" placeholder="Ex : Développement d'un site web vitrine pour le mois de mars 2026, incluant la conception, le développement et la mise en ligne..." rows="4"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label for="wiz-montant-ht">Montant HT (€) *</label>
+        <input type="number" id="wiz-montant-ht" placeholder="1500" min="0" step="0.01" inputmode="decimal" />
+      </div>
+
+      <!-- TVA toggle -->
+      <div class="toggle-row">
+        <div class="toggle-label-group">
+          <span class="tl-main">TVA applicable</span>
+          <span class="tl-sub">Par défaut, micro-entrepreneurs : TVA non applicable</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="wiz-tva-toggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="form-row" id="tva-rate-row" style="display:none;">
+        <label for="wiz-taux-tva">Taux de TVA (%)</label>
+        <select id="wiz-taux-tva">
+          <option value="20" selected>20% (taux normal)</option>
+          <option value="10">10% (taux intermédiaire)</option>
+          <option value="5.5">5,5% (taux réduit)</option>
+          <option value="2.1">2,1% (taux super réduit)</option>
+        </select>
+      </div>
+
+      <div class="step-actions">
+        <button class="btn btn-secondary" id="wiz-back-3">← Retour</button>
+        <button class="btn btn-primary" id="btn-generate">
+          Générer en 30 secondes ✨
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIEW: GENERATING (Loading)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-generating" class="view">
+  <div class="generating-screen">
+    <div class="generating-anim">✨</div>
+    <h2 class="generating-title">Claude rédige votre facture... ✨</h2>
+    <p class="generating-sub">(environ 30 secondes)</p>
+    <p class="generating-sub mt-2" style="margin-top:1rem;">Toutes les mentions légales obligatoires seront incluses automatiquement.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIEW: DOCUMENT PREVIEW
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-preview" class="view">
+  <div class="page-content">
+
+    <!-- Toolbar -->
+    <div class="preview-toolbar">
+      <button class="btn btn-secondary btn-sm" id="btn-prev-back">← Retour</button>
+      <button class="btn btn-primary" id="btn-download-pdf" style="margin-left:auto;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Télécharger en PDF
+      </button>
+    </div>
+
+    <!-- Invoice Preview Card -->
+    <div class="invoice-preview">
+
+      <!-- Header band -->
+      <div class="invoice-preview-header">
+        <div class="inv-num" id="prev-numero">FA-2026-001</div>
+        <div class="inv-title" id="prev-title">FACTURE</div>
+        <div style="font-size:0.8rem;opacity:0.8;margin-top:0.5rem;" id="prev-date-emission"></div>
+        <div style="font-size:0.8rem;opacity:0.8;" id="prev-date-echeance"></div>
+      </div>
+
+      <!-- Body -->
+      <div class="invoice-body">
+
+        <!-- Emitter / Client -->
+        <div class="invoice-meta-grid">
+          <div>
+            <div class="inv-party-label">Émetteur</div>
+            <div class="inv-party-name" id="prev-emetteur-nom"></div>
+            <div class="inv-party-detail" id="prev-emetteur-detail"></div>
+          </div>
+          <div>
+            <div class="inv-party-label">Facturé à</div>
+            <div class="inv-party-name" id="prev-client-nom"></div>
+            <div class="inv-party-detail" id="prev-client-detail"></div>
+          </div>
+        </div>
+
+        <!-- AI-generated text -->
+        <div class="invoice-generated-text" id="prev-generated-text"></div>
+
+        <!-- Totals -->
+        <div class="invoice-totals">
+          <div class="invoice-total-row">
+            <span>Montant HT</span>
+            <span id="prev-ht"></span>
+          </div>
+          <div class="invoice-total-row" id="prev-tva-row" style="display:none;">
+            <span id="prev-tva-label">TVA (20%)</span>
+            <span id="prev-tva"></span>
+          </div>
+          <div class="invoice-total-row">
+            <span>Total TTC</span>
+            <span id="prev-ttc"></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Legal mentions -->
+      <div class="invoice-legal" id="prev-legal"></div>
+
+    </div><!-- /invoice-preview -->
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIEW: DOCUMENTS LIST
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-documents" class="view">
+  <div class="page-content">
+
+    <div class="list-header">
+      <h2 class="list-header-title">Mes documents</h2>
+    </div>
+
+    <div class="search-input">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="docs-search" placeholder="Rechercher par numéro ou client..." />
+    </div>
+
+    <div class="card" id="docs-list">
+      <div class="card-empty">
+        <span class="empty-icon">📂</span>
+        Aucun document trouvé.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIEW: CLIENTS
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-clients" class="view">
+  <div class="page-content">
+
+    <div class="list-header">
+      <h2 class="list-header-title">Mes clients</h2>
+      <button class="btn btn-primary btn-sm" id="btn-add-client">+ Ajouter</button>
+    </div>
+
+    <div id="clients-list">
+      <div class="card-empty">
+        <span class="empty-icon">👥</span>
+        Aucun client enregistré.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     VIEW: PROFILE / SETTINGS
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-profile" class="view">
+  <div class="page-content">
+
+    <h2 class="list-header-title" style="margin-bottom:1rem;">Mon profil</h2>
+
+    <!-- Usage meter -->
+    <div class="profile-section">
+      <div class="profile-section-title">Utilisation mensuelle</div>
+      <p class="text-sm mb-1" id="prof-usage-label">0 / 30 documents ce mois</p>
+      <div class="usage-meter">
+        <div class="usage-meter-bar">
+          <div class="usage-meter-fill" id="prof-usage-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <p class="text-sm text-muted mt-1">Réinitialisation le 1er de chaque mois.</p>
+    </div>
+
+    <!-- Profile form -->
+    <div class="profile-section">
+      <div class="profile-section-title">Informations professionnelles</div>
+      <p class="text-sm text-muted mb-2" id="prof-email-display"></p>
+
+      <form id="form-profile">
+        <div class="form-row">
+          <label for="prof-nom">Nom / Raison sociale</label>
+          <input type="text" id="prof-nom" />
+        </div>
+        <div class="form-row">
+          <label for="prof-siret">SIRET (14 chiffres)</label>
+          <input type="text" id="prof-siret" maxlength="14" inputmode="numeric" />
+        </div>
+        <div class="form-row">
+          <label for="prof-adresse">Adresse complète</label>
+          <textarea id="prof-adresse" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <label for="prof-telephone">Téléphone</label>
+          <input type="tel" id="prof-telephone" />
+        </div>
+        <div class="form-row">
+          <label for="prof-iban">IBAN (optionnel)</label>
+          <input type="text" id="prof-iban" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Enregistrer les modifications</button>
+      </form>
+    </div>
+
+    <!-- Account -->
+    <div class="profile-section">
+      <div class="profile-section-title">Compte</div>
+      <button class="btn btn-danger btn-full" id="btn-logout">Se déconnecter</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     BOTTOM NAVIGATION (mobile)
+     ═══════════════════════════════════════════════════════════════════════ -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none;">
+  <button class="nav-btn" data-view="view-dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+    <span>Accueil</span>
+  </button>
+
+  <button class="nav-btn" data-view="view-documents">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+    <span>Documents</span>
+  </button>
+
+  <button class="nav-btn nav-cta" data-view="view-new-document">
+    <div class="nav-cta-inner">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span>Nouveau</span>
+    </div>
+  </button>
+
+  <button class="nav-btn" data-view="view-clients">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    <span>Clients</span>
+  </button>
+
+  <button class="nav-btn" data-view="view-profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+    <span>Profil</span>
+  </button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODAL: ADD / EDIT CLIENT
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="add-client-modal" class="modal-backdrop">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close">✕</button>
+    <div class="modal-handle"></div>
+    <h3 class="modal-title">Ajouter un client</h3>
+
+    <form id="form-add-client">
+      <div class="form-row">
+        <label for="add-client-nom">Nom / Raison sociale *</label>
+        <input type="text" id="add-client-nom" placeholder="Acme Corp" required />
+      </div>
+      <div class="form-row">
+        <label for="add-client-adresse">Adresse *</label>
+        <textarea id="add-client-adresse" placeholder="1 rue du Commerce, 75001 Paris" rows="2" required></textarea>
+      </div>
+      <div class="form-row">
+        <label for="add-client-email">Email</label>
+        <input type="email" id="add-client-email" placeholder="contact@client.fr" />
+      </div>
+      <div class="form-row">
+        <label for="add-client-siret">SIRET client (optionnel)</label>
+        <input type="text" id="add-client-siret" placeholder="14 chiffres" maxlength="14" inputmode="numeric" />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full mt-2">Enregistrer</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     MODAL: MONTHLY LIMIT REACHED
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="limit-modal" class="modal-backdrop">
+  <div class="modal" style="position:relative;">
+    <div class="modal-handle"></div>
+    <div class="upgrade-icon">🚀</div>
+    <h3 class="upgrade-title">Limite mensuelle atteinte</h3>
+    <p class="upgrade-body">
+      Vous avez utilisé vos 30 documents gratuits ce mois-ci.<br>
+      Passez à l'abonnement premium pour continuer à créer des factures sans limite.
+    </p>
+    <button class="btn btn-primary btn-full mb-1">Voir les offres (12€/mois)</button>
+    <button class="btn btn-secondary btn-full" id="btn-limit-close">Fermer</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+  // Show/hide app chrome (header + nav) based on auth state
+  // This is handled via a MutationObserver on .view.active
+  const observer = new MutationObserver(() => {
+    const activeView = document.querySelector('.view.active');
+    const isLoggedIn = activeView && activeView.id !== 'login-screen';
+    const header = document.getElementById('app-header');
+    const nav = document.getElementById('bottom-nav');
+    if (header) header.style.display = isLoggedIn ? 'flex' : 'none';
+    if (nav) nav.style.display = isLoggedIn ? 'flex' : 'none';
+
+    // Show desktop nav on large screens
+    const desktopNav = header?.querySelector('.desktop-nav');
+    if (desktopNav) desktopNav.style.display = window.innerWidth >= 680 ? 'flex' : 'none';
+
+    // Show avatar if logged in
+    const avatar = document.getElementById('user-avatar');
+    if (avatar) avatar.style.display = isLoggedIn ? 'block' : 'none';
+  });
+  observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+  // Also update desktop nav on resize
+  window.addEventListener('resize', () => {
+    const header = document.getElementById('app-header');
+    const desktopNav = header?.querySelector('.desktop-nav');
+    const nav = document.getElementById('bottom-nav');
+    if (!desktopNav || !nav) return;
+    if (window.innerWidth >= 680) {
+      desktopNav.style.display = 'flex';
+      nav.style.display = 'none';
+    } else {
+      desktopNav.style.display = 'none';
+      const activeView = document.querySelector('.view.active');
+      const isLoggedIn = activeView && activeView.id !== 'login-screen';
+      nav.style.display = isLoggedIn ? 'flex' : 'none';
+    }
+  });
+</script>
+
+<script type="module" src="app.js"></script>
+
+</body>
+</html>
