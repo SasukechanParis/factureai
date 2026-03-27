@@ -171,7 +171,7 @@ document.getElementById('btn-google-signin').addEventListener('click', function 
 
 // ─── Onboarding ───────────────────────────────────────────────────────────────
 function showOnboarding() {
-  showView('login-screen'); // keep login screen visible behind modal
+  showView('view-dashboard'); // hide login screen; modal overlays the app
   openModal('onboarding-modal');
   // Pre-fill name
   if (state.profile?.nom_prenom) {
