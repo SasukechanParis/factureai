@@ -11,6 +11,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  console.log('API Key exists:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('Request body keys:', Object.keys(req.body || {}));
+
   try {
     const { documentType, clientName, clientAddress, clientSiret, amount, description, documentNumber, issueDate, dueDate, sellerName, sellerAddress, sellerSiret, sellerEmail } = req.body;
 
@@ -45,9 +48,15 @@ Réponds UNIQUEMENT avec ce JSON valide:
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Anthropic API error:', response.status, errorText);
-      return res.status(500).json({ error: 'Claude API error', status: response.status, details: errorText });
+      const errorBody = await response.text();
+      console.error('Anthropic API error:', response.status, errorBody);
+      return res.status(500).json({
+        error: 'Claude API error',
+        httpStatus: response.status,
+        apiKeyExists: !!process.env.ANTHROPIC_API_KEY,
+        apiKeyLength: process.env.ANTHROPIC_API_KEY ? process.env.ANTHROPIC_API_KEY.length : 0,
+        details: errorBody
+      });
     }
 
     const data = await response.json();
