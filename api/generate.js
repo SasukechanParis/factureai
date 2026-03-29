@@ -1,10 +1,13 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
-
-  // CORS for GitHub Pages domain
-  res.setHeader('Access-Control-Allow-Origin', 'https://sasukechanparis.github.io');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  if (req.method !== 'POST') return res.status(405).end();
 
   const { emetteur, client, document_info, prestations, montants } = req.body;
 
