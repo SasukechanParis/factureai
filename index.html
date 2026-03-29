@@ -164,9 +164,14 @@
     <!-- Recent documents -->
     <p class="section-title">Documents récents</p>
     <div class="card" id="recent-docs-list">
-      <div class="card-empty">
-        <span class="empty-icon">📄</span>
-        Aucun document pour l'instant.
+      <div class="card-empty-first" id="dash-empty-first">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;">🧾</div>
+        <div class="empty-headline">Créez votre première facture en 2 minutes</div>
+        <div class="empty-sub">Décrivez votre prestation en quelques mots.<br>Claude s'occupe du reste — mentions légales incluses.</div>
+        <button class="btn btn-primary" onclick="document.getElementById('btn-quick-new').click()">
+          Commencer maintenant →
+        </button>
+        <div class="empty-proof">✓ Facture légalement conforme dès la première utilisation</div>
       </div>
     </div>
 
@@ -192,23 +197,17 @@
 
     <!-- ── Step 1: Type ── -->
     <div class="step-panel active" id="step-1">
-      <div class="type-grid">
-        <div class="type-card selected" data-type="facture">
-          <span class="type-emoji">🧾</span>
-          <div class="type-name">Facture</div>
-          <div class="type-sub">Paiement dû</div>
-        </div>
-        <div class="type-card disabled" data-type="devis">
-          <span class="type-emoji">📋</span>
-          <div class="type-name">Devis</div>
-          <div class="type-sub">Bientôt</div>
-        </div>
-        <div class="type-card disabled" data-type="contrat">
-          <span class="type-emoji">📝</span>
-          <div class="type-name">Contrat</div>
-          <div class="type-sub">Bientôt</div>
+      <div class="type-grid" style="grid-template-columns:1fr;">
+        <div class="type-card selected" data-type="facture" style="display:flex;align-items:center;gap:1rem;text-align:left;padding:1.1rem 1.25rem;">
+          <span class="type-emoji" style="font-size:2rem;margin-bottom:0;">🧾</span>
+          <div>
+            <div class="type-name">Facture</div>
+            <div class="type-sub">Demande de paiement légalement conforme</div>
+          </div>
+          <div style="margin-left:auto;color:var(--color-success);font-size:0.75rem;font-weight:700;">✓ Disponible</div>
         </div>
       </div>
+      <p style="font-size:0.78rem;color:var(--color-text-muted);margin-top:0.5rem;">Devis et contrats — bientôt disponibles</p>
 
       <div class="step-actions">
         <button class="btn btn-primary" id="wiz-next-1">
@@ -274,7 +273,43 @@
 
       <div class="form-row">
         <label for="wiz-description">Description de la prestation *</label>
-        <textarea id="wiz-description" placeholder="Ex : Développement d'un site web vitrine pour le mois de mars 2026, incluant la conception, le développement et la mise en ligne..." rows="4"></textarea>
+        <textarea id="wiz-description" placeholder="Décrivez votre prestation en quelques mots — Claude la reformule en français professionnel..." rows="4"></textarea>
+      </div>
+
+      <!-- Exemples par métier -->
+      <div class="examples-panel" id="examples-panel">
+        <button class="examples-toggle" id="btn-examples-toggle" type="button">
+          💡 Voir des exemples par métier
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="examples-list" id="examples-list">
+          <button class="example-chip" data-example="Photo" type="button">
+            <strong>📷 Photographe</strong>
+            Reportage photo mariage du 15 mars 2026 — préparatifs, cérémonie, cocktail — 8h de couverture, 300 photos retouchées livrées sous 4 semaines
+          </button>
+          <button class="example-chip" data-example="Design" type="button">
+            <strong>🎨 Graphiste / Designer</strong>
+            Création d'une identité visuelle complète : logo, charte graphique, carte de visite et 3 templates réseaux sociaux — livraison des fichiers sources incluse
+          </button>
+          <button class="example-chip" data-example="Dev" type="button">
+            <strong>💻 Développeur web</strong>
+            Développement d'un site vitrine WordPress 5 pages, responsive, avec formulaire de contact et intégration Google Analytics — hébergement non inclus
+          </button>
+          <button class="example-chip" data-example="Conseil" type="button">
+            <strong>📊 Consultant / Coach</strong>
+            Accompagnement stratégique mars 2026 — 4 sessions de 2h, audit de la situation actuelle, plan d'action 90 jours et suivi hebdomadaire par email
+          </button>
+          <button class="example-chip" data-example="Redaction" type="button">
+            <strong>✍️ Rédacteur / Traducteur</strong>
+            Rédaction de 5 articles de blog SEO sur la thématique finance personnelle — 800 mots chacun, recherche de mots-clés et optimisation on-page incluses
+          </button>
+          <button class="example-chip" data-example="Formation" type="button">
+            <strong>🎓 Formateur</strong>
+            Formation "Prise de parole en public" — 2 journées en présentiel les 18 et 19 mars 2026, support de formation PDF inclus, 12 participants maximum
+          </button>
+        </div>
       </div>
 
       <div class="form-row">
@@ -321,9 +356,27 @@
 <div id="view-generating" class="view">
   <div class="generating-screen">
     <div class="generating-anim">✨</div>
-    <h2 class="generating-title">Claude rédige votre facture... ✨</h2>
-    <p class="generating-sub">(environ 30 secondes)</p>
-    <p class="generating-sub mt-2" style="margin-top:1rem;">Toutes les mentions légales obligatoires seront incluses automatiquement.</p>
+    <h2 class="generating-title">Claude rédige votre facture...</h2>
+    <p class="generating-sub">environ 30 secondes</p>
+
+    <ul class="generating-checklist" id="generating-checklist">
+      <li id="gen-step-1">
+        <span class="check-icon">1</span>
+        Analyse de votre prestation
+      </li>
+      <li id="gen-step-2">
+        <span class="check-icon">2</span>
+        Rédaction en français professionnel
+      </li>
+      <li id="gen-step-3">
+        <span class="check-icon">3</span>
+        Vérification des mentions légales obligatoires
+      </li>
+      <li id="gen-step-4">
+        <span class="check-icon">4</span>
+        Calcul TVA et montants (art. 293 B CGI)
+      </li>
+    </ul>
   </div>
 </div>
 

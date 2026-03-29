@@ -291,11 +291,20 @@ async function loadDashboard() {
 function renderRecentDocuments(docs) {
   const container = document.getElementById('recent-docs-list');
   if (!docs || docs.length === 0) {
-    container.innerHTML = `
-      <div class="card-empty">
-        <span class="empty-icon">📄</span>
-        Aucun document pour l'instant.<br>Créez votre première facture !
-      </div>`;
+    // Keep the static first-time empty state from HTML (already in DOM)
+    const existing = container.querySelector('.card-empty-first');
+    if (!existing) {
+      container.innerHTML = `
+        <div class="card-empty-first">
+          <div style="font-size:2.5rem;margin-bottom:0.75rem;">🧾</div>
+          <div class="empty-headline">Créez votre première facture en 2 minutes</div>
+          <div class="empty-sub">Décrivez votre prestation en quelques mots.<br>Claude s'occupe du reste — mentions légales incluses.</div>
+          <button class="btn btn-primary" onclick="document.getElementById('btn-quick-new').click()">
+            Commencer maintenant →
+          </button>
+          <div class="empty-proof">✓ Facture légalement conforme dès la première utilisation</div>
+        </div>`;
+    }
     return;
   }
 
@@ -480,6 +489,27 @@ document.getElementById('wiz-next-2').addEventListener('click', () => {
 });
 
 // ── Step 3: Details ──
+
+// Exemple descriptions toggle
+document.getElementById('btn-examples-toggle').addEventListener('click', () => {
+  document.getElementById('examples-panel').classList.toggle('open');
+});
+
+// Click an example chip → inject into textarea
+document.getElementById('examples-list').addEventListener('click', (e) => {
+  const chip = e.target.closest('.example-chip');
+  if (!chip) return;
+  const textarea = document.getElementById('wiz-description');
+  // Extract text content without the <strong> label
+  const strong = chip.querySelector('strong');
+  const text = chip.textContent.replace(strong.textContent, '').trim();
+  textarea.value = text;
+  state.wizard.description = text;
+  textarea.focus();
+  document.getElementById('examples-panel').classList.remove('open');
+  showToast('Exemple inséré — personnalisez-le selon votre prestation.', 'default');
+});
+
 document.getElementById('wiz-date-emission').addEventListener('change', (e) => {
   state.wizard.dateEmission = e.target.value;
 });
@@ -534,9 +564,25 @@ document.getElementById('btn-generate').addEventListener('click', async () => {
   await runGeneration();
 });
 
+// Animate the checklist steps during generation (purely visual, non-blocking)
+function animateGeneratingChecklist() {
+  const steps = ['gen-step-1', 'gen-step-2', 'gen-step-3', 'gen-step-4'];
+  const delays = [800, 5000, 12000, 20000]; // ms — approximate Claude response timeline
+  steps.forEach((id, i) => {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('done');
+        el.querySelector('.check-icon').textContent = '✓';
+      }
+    }, delays[i]);
+  });
+}
+
 async function runGeneration() {
   // Show generating screen
   showView('view-generating');
+  animateGeneratingChecklist();
 
   const { montantHT, tvaApplicable, tauxTVA } = state.wizard;
   const montantTVA = tvaApplicable ? +(montantHT * (tauxTVA / 100)).toFixed(2) : 0;
