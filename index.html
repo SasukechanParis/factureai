@@ -158,6 +158,16 @@
       </div>
     </div>
 
+    <!-- Overdue alert (hidden until docs loaded) -->
+    <div class="overdue-alert hidden" id="dash-overdue-alert" onclick="document.querySelector('[data-view=view-documents]').click(); setTimeout(()=>document.getElementById('tab-overdue').click(),300)">
+      <div class="overdue-alert-icon">⚠️</div>
+      <div class="overdue-alert-body">
+        <div class="overdue-alert-title" id="dash-overdue-title">Factures en retard de paiement</div>
+        <div class="overdue-alert-sub" id="dash-overdue-sub">Cliquez pour voir les détails</div>
+      </div>
+      <div class="overdue-alert-arrow">→</div>
+    </div>
+
     <!-- Quick action -->
     <button class="quick-action" id="btn-quick-new">
       <div>
@@ -282,7 +292,10 @@
       </div>
 
       <div class="form-row">
-        <label for="wiz-description">Description de la prestation *</label>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.4rem;">
+          <label for="wiz-description" style="margin-bottom:0;">Description de la prestation *</label>
+          <button class="btn-text-link hidden" id="btn-reuse-desc" type="button">↩ Reprendre la dernière</button>
+        </div>
         <textarea id="wiz-description" placeholder="Décrivez votre prestation en quelques mots — Claude la reformule en français professionnel..." rows="4"></textarea>
       </div>
 
@@ -538,6 +551,14 @@
 
     <div class="list-header">
       <h2 class="list-header-title">Mes documents</h2>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="filter-tabs" id="docs-filter-tabs">
+      <button class="filter-tab active" id="tab-all" data-filter="all">Tous <span class="tab-count" id="tc-all">0</span></button>
+      <button class="filter-tab" id="tab-pending" data-filter="pending">En attente <span class="tab-count" id="tc-pending">0</span></button>
+      <button class="filter-tab tab-overdue" id="tab-overdue" data-filter="overdue">⚠️ En retard <span class="tab-count" id="tc-overdue">0</span></button>
+      <button class="filter-tab tab-paid" id="tab-paid" data-filter="paid">✓ Payés <span class="tab-count" id="tc-paid">0</span></button>
     </div>
 
     <div class="search-input">

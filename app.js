@@ -300,6 +300,9 @@ async function loadDashboard() {
     // Recent docs list
     renderRecentDocuments(recentDocs);
 
+    // Overdue alert card
+    renderOverdueAlert(recentDocs);
+
     // Update user avatar
     if (state.user.photoURL) {
       const avatarEl = document.getElementById('user-avatar');
@@ -313,6 +316,37 @@ async function loadDashboard() {
     console.error(err);
     showToast('Erreur lors du chargement du tableau de bord.', 'error');
   }
+}
+
+function renderOverdueAlert(docs) {
+  const alertEl = document.getElementById('dash-overdue-alert');
+  if (!alertEl) return;
+
+  const overdueList = (docs || []).filter(
+    (d) => isOverdue(d.date_echeance) && d.status !== 'paid'
+  );
+
+  if (overdueList.length === 0) {
+    alertEl.classList.add('hidden');
+    return;
+  }
+
+  alertEl.classList.remove('hidden');
+  const n = overdueList.length;
+  document.getElementById('dash-overdue-title').textContent =
+    n === 1 ? '1 facture en retard de paiement' : `${n} factures en retard de paiement`;
+
+  // Show oldest overdue date for urgency
+  const oldest = overdueList.reduce((a, b) => {
+    const da = a.date_echeance?.toDate ? a.date_echeance.toDate() : new Date(a.date_echeance || 0);
+    const db = b.date_echeance?.toDate ? b.date_echeance.toDate() : new Date(b.date_echeance || 0);
+    return da < db ? a : b;
+  });
+  const oldestDate = oldest.date_echeance?.toDate
+    ? oldest.date_echeance.toDate()
+    : new Date(oldest.date_echeance);
+  document.getElementById('dash-overdue-sub').textContent =
+    `La plus ancienne : ${formatDate(oldestDate)} — cliquez pour voir`;
 }
 
 function renderRecentDocuments(docs) {
@@ -446,6 +480,12 @@ function renderWizardStep(step) {
     document.getElementById('wiz-step-sub').textContent = 'Décrivez votre prestation';
     document.getElementById('wiz-date-emission').value = state.wizard.dateEmission;
     document.getElementById('wiz-date-echeance').value = state.wizard.dateEcheance;
+    // Show reuse button if a previous description is stored
+    const reuseEl = document.getElementById('btn-reuse-desc');
+    if (reuseEl) {
+      const saved = localStorage.getItem('factureai_last_desc');
+      reuseEl.classList.toggle('hidden', !saved);
+    }
   }
 }
 
@@ -546,6 +586,23 @@ document.getElementById('wiz-date-echeance').addEventListener('change', (e) => {
 document.getElementById('wiz-description').addEventListener('input', (e) => {
   state.wizard.description = e.target.value;
 });
+
+// Show "Reprendre la dernière" if a previous description exists
+const lastDesc = localStorage.getItem('factureai_last_desc');
+const reuseBtn = document.getElementById('btn-reuse-desc');
+if (lastDesc && reuseBtn) reuseBtn.classList.remove('hidden');
+
+if (reuseBtn) {
+  reuseBtn.addEventListener('click', () => {
+    const saved = localStorage.getItem('factureai_last_desc');
+    if (!saved) return;
+    const ta = document.getElementById('wiz-description');
+    ta.value = saved;
+    state.wizard.description = saved;
+    ta.focus();
+    showToast('Description précédente restaurée.', 'default');
+  });
+}
 document.getElementById('wiz-montant-ht').addEventListener('input', (e) => {
   state.wizard.montantHT = parseFloat(e.target.value) || 0;
   updateAmountPreview();
@@ -715,6 +772,11 @@ async function runGeneration() {
     const savedId = await saveDocument(state.user.uid, docData);
     state.wizard.savedDocId = savedId;
     await incrementMonthlyCount(state.user.uid);
+
+    // Persist description for "Reprendre la dernière" button
+    if (state.wizard.description) {
+      localStorage.setItem('factureai_last_desc', state.wizard.description);
+    }
 
     // Show preview
     renderPreview({ ...docData, id: savedId });
@@ -915,6 +977,10 @@ async function loadDocumentsList() {
     setLoading(true);
     state.documents = await getDocuments(state.user.uid);
     setLoading(false);
+    activeFilter = 'all';
+    document.querySelectorAll('.filter-tab').forEach((t) => t.classList.remove('active'));
+    document.getElementById('tab-all')?.classList.add('active');
+    updateFilterCounts(state.documents);
     renderDocumentsList(state.documents);
   } catch (err) {
     setLoading(false);
@@ -963,14 +1029,61 @@ function renderDocumentsList(docs) {
   }).join('');
 }
 
-// Search
-document.getElementById('docs-search').addEventListener('input', (e) => {
-  const q = e.target.value.toLowerCase();
-  const filtered = state.documents.filter((d) =>
-    (d.numero || '').toLowerCase().includes(q) ||
-    (d.client_snapshot?.nom_entreprise || '').toLowerCase().includes(q)
-  );
+// ─── Filter + Search state ────────────────────────────────────────────────────
+let activeFilter = 'all';
+
+function applyFilters() {
+  const q = (document.getElementById('docs-search').value || '').toLowerCase();
+
+  const filtered = state.documents.filter((d) => {
+    // Text search
+    const matchesText = !q ||
+      (d.numero || '').toLowerCase().includes(q) ||
+      (d.client_snapshot?.nom_entreprise || '').toLowerCase().includes(q);
+
+    // Tab filter
+    let matchesTab = true;
+    if (activeFilter === 'pending') {
+      matchesTab = d.status !== 'paid' && !isOverdue(d.date_echeance);
+    } else if (activeFilter === 'overdue') {
+      matchesTab = isOverdue(d.date_echeance) && d.status !== 'paid';
+    } else if (activeFilter === 'paid') {
+      matchesTab = d.status === 'paid';
+    }
+
+    return matchesText && matchesTab;
+  });
+
   renderDocumentsList(filtered);
+}
+
+function updateFilterCounts(docs) {
+  const all = docs.length;
+  const overdue = docs.filter((d) => isOverdue(d.date_echeance) && d.status !== 'paid').length;
+  const paid = docs.filter((d) => d.status === 'paid').length;
+  const pending = docs.filter((d) => d.status !== 'paid' && !isOverdue(d.date_echeance)).length;
+
+  document.getElementById('tc-all').textContent = all;
+  document.getElementById('tc-overdue').textContent = overdue;
+  document.getElementById('tc-paid').textContent = paid;
+  document.getElementById('tc-pending').textContent = pending;
+
+  // Highlight overdue tab if there are any
+  const overdueTab = document.getElementById('tab-overdue');
+  if (overdueTab) overdueTab.style.fontWeight = overdue > 0 ? '800' : '';
+}
+
+// Search
+document.getElementById('docs-search').addEventListener('input', applyFilters);
+
+// Filter tabs
+document.getElementById('docs-filter-tabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.filter-tab');
+  if (!tab) return;
+  activeFilter = tab.dataset.filter;
+  document.querySelectorAll('.filter-tab').forEach((t) => t.classList.remove('active'));
+  tab.classList.add('active');
+  applyFilters();
 });
 
 window.downloadDocPDF = async function (docId) {

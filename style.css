@@ -996,6 +996,99 @@ textarea { resize: vertical; min-height: 96px; }
   line-height: 1.6;
 }
 
+/* ─── Dashboard Overdue Alert Card ─────────────────────────────────────────── */
+.overdue-alert {
+  background: #FFF7ED;
+  border: 1.5px solid #FED7AA;
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.overdue-alert:hover { background: #FFEDD5; }
+
+.overdue-alert-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.overdue-alert-body { flex: 1; }
+
+.overdue-alert-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #92400E;
+}
+
+.overdue-alert-sub {
+  font-size: 0.75rem;
+  color: #B45309;
+  margin-top: 1px;
+}
+
+.overdue-alert-arrow {
+  color: #D97706;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* ─── Filter Tabs ────────────────────────────────────────────────────────────── */
+.filter-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.filter-tabs::-webkit-scrollbar { display: none; }
+
+.filter-tab {
+  flex-shrink: 0;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 99px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.filter-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+.filter-tab.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.filter-tab.tab-overdue.active { background: var(--color-danger); border-color: var(--color-danger); }
+.filter-tab.tab-paid.active    { background: var(--color-success); border-color: var(--color-success); }
+
+.filter-tab .tab-count {
+  display: inline-block;
+  background: rgba(255,255,255,0.25);
+  border-radius: 99px;
+  padding: 0 5px;
+  font-size: 0.7rem;
+  margin-left: 3px;
+}
+
+.filter-tab:not(.active) .tab-count {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
 /* ─── Documents List ────────────────────────────────────────────────────────── */
 .list-header {
   display: flex;
@@ -1413,6 +1506,18 @@ textarea { resize: vertical; min-height: 96px; }
 .text-sm { font-size: 0.85rem; }
 .font-bold { font-weight: 700; }
 .hidden { display: none !important; }
+
+.btn-text-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 /* ─── Desktop (≥ 680px) ──────────────────────────────────────────────────────── */
 @media (min-width: 680px) {
