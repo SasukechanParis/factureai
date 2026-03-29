@@ -42,7 +42,7 @@
 <div id="login-screen" class="view active">
   <div class="login-card">
     <div class="login-logo">Factur<span>AI</span></div>
-    <p class="login-tagline">Créez vos factures conformes en 30 secondes</p>
+    <p class="login-tagline">Votre première facture légale en 2 minutes.<br><span style="color:var(--color-text-muted);font-size:0.9em;">Même si vous n'y connaissez rien.</span></p>
 
     <ul class="login-value-props">
       <li>Factures légalement conformes générées par IA</li>
@@ -56,7 +56,7 @@
       Se connecter avec Google
     </button>
 
-    <p class="login-disclaimer">En vous connectant, vous acceptez nos conditions d'utilisation.</p>
+    <p class="login-disclaimer">Gratuit pour commencer · Aucune carte requise · Données sécurisées en France</p>
   </div>
 </div>
 
@@ -69,14 +69,16 @@
     <h2 class="modal-title">Finalisez votre profil</h2>
     <p class="text-muted mb-2">Ces informations apparaîtront sur toutes vos factures.</p>
 
+    <div class="onboarding-progress">
+      <div style="font-size:0.78rem;font-weight:600;color:var(--color-text-muted);margin-bottom:0.75rem;">
+        Ces informations apparaîtront sur toutes vos factures — vous pourrez les modifier plus tard.
+      </div>
+    </div>
+
     <form id="form-onboarding">
       <div class="form-row">
         <label for="ob-nom">Nom / Raison sociale *</label>
-        <input type="text" id="ob-nom" placeholder="Jean Dupont ou Ma Société" required />
-      </div>
-      <div class="form-row">
-        <label for="ob-siret">Numéro SIRET (14 chiffres) *</label>
-        <input type="text" id="ob-siret" placeholder="12345678901234" maxlength="14" inputmode="numeric" required />
+        <input type="text" id="ob-nom" placeholder="Jean Dupont ou Ma Société SAS" required />
       </div>
       <div class="form-row">
         <label for="ob-adresse">Adresse complète *</label>
@@ -87,11 +89,19 @@
         <input type="tel" id="ob-telephone" placeholder="06 12 34 56 78" required />
       </div>
       <div class="form-row">
-        <label for="ob-iban">IBAN (optionnel — affiché sur les factures)</label>
-        <input type="text" id="ob-iban" placeholder="FR76 1234 5678 9012 3456 7890 123" />
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.4rem;">
+          <label for="ob-siret" style="margin-bottom:0;">Numéro SIRET *</label>
+          <span id="ob-siret-counter" class="siret-counter">0/14</span>
+        </div>
+        <input type="text" id="ob-siret" placeholder="12345678901234" maxlength="14" inputmode="numeric" required autocomplete="off" />
+        <p class="siret-hint">📍 Trouvez votre SIRET sur <strong>avis-situation-sirene.insee.fr</strong> ou votre Kbis</p>
+      </div>
+      <div class="form-row">
+        <label for="ob-iban">IBAN (optionnel — affiché sur les factures pour le paiement)</label>
+        <input type="text" id="ob-iban" placeholder="FR76 3000 4000 0300 0000 0123 456" />
       </div>
       <button type="submit" class="btn btn-primary btn-full mt-2">
-        Commencer à facturer →
+        Créer mon compte professionnel →
       </button>
     </form>
   </div>
@@ -339,6 +349,24 @@
         </select>
       </div>
 
+      <!-- Récapitulatif montants en temps réel -->
+      <div id="amount-preview" class="amount-preview hidden">
+        <div class="amount-preview-title">Récapitulatif</div>
+        <div class="amount-preview-row">
+          <span>Montant HT</span>
+          <span id="prev-ht-live">—</span>
+        </div>
+        <div class="amount-preview-row" id="prev-tva-live-row" style="display:none;">
+          <span id="prev-tva-live-label">TVA (20%)</span>
+          <span id="prev-tva-live">—</span>
+        </div>
+        <div class="amount-preview-row amount-preview-total">
+          <span>Total TTC</span>
+          <span id="prev-ttc-live">—</span>
+        </div>
+        <div id="prev-tva-note" class="amount-preview-note">TVA non applicable · art. 293 B du CGI</div>
+      </div>
+
       <div class="step-actions">
         <button class="btn btn-secondary" id="wiz-back-3">← Retour</button>
         <button class="btn btn-primary" id="btn-generate">
@@ -535,8 +563,11 @@
           <input type="text" id="prof-nom" />
         </div>
         <div class="form-row">
-          <label for="prof-siret">SIRET (14 chiffres)</label>
-          <input type="text" id="prof-siret" maxlength="14" inputmode="numeric" />
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.4rem;">
+            <label for="prof-siret" style="margin-bottom:0;">SIRET (14 chiffres)</label>
+            <span id="prof-siret-counter" class="siret-counter">0/14</span>
+          </div>
+          <input type="text" id="prof-siret" maxlength="14" inputmode="numeric" autocomplete="off" />
         </div>
         <div class="form-row">
           <label for="prof-adresse">Adresse complète</label>

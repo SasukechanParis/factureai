@@ -187,6 +187,32 @@ onAuthStateChanged(async (user) => {
   }
 });
 
+// ─── SIRET Counter Helper ─────────────────────────────────────────────────────
+function bindSiretCounter(inputId, counterId) {
+  const input = document.getElementById(inputId);
+  const counter = document.getElementById(counterId);
+  if (!input || !counter) return;
+
+  // Digits-only filtering on input
+  input.addEventListener('input', () => {
+    // Strip non-digits silently
+    const digitsOnly = input.value.replace(/\D/g, '');
+    if (input.value !== digitsOnly) input.value = digitsOnly;
+
+    const len = digitsOnly.length;
+    counter.textContent = `${len}/14`;
+    counter.classList.remove('valid', 'invalid');
+    if (len === 14) counter.classList.add('valid');
+    else if (len > 0) counter.classList.add('invalid');
+  });
+
+  // Trigger once on load to reflect pre-filled value
+  input.dispatchEvent(new Event('input'));
+}
+
+bindSiretCounter('ob-siret', 'ob-siret-counter');
+bindSiretCounter('prof-siret', 'prof-siret-counter');
+
 // ─── Login Screen ─────────────────────────────────────────────────────────────
 document.getElementById('btn-google-signin').addEventListener('click', function () {
   // Non-async — MUST NOT use async/await here (Safari gesture chain)
@@ -521,14 +547,51 @@ document.getElementById('wiz-description').addEventListener('input', (e) => {
 });
 document.getElementById('wiz-montant-ht').addEventListener('input', (e) => {
   state.wizard.montantHT = parseFloat(e.target.value) || 0;
+  updateAmountPreview();
 });
 document.getElementById('wiz-tva-toggle').addEventListener('change', (e) => {
   state.wizard.tvaApplicable = e.target.checked;
   document.getElementById('tva-rate-row').style.display = e.target.checked ? 'block' : 'none';
+  updateAmountPreview();
 });
 document.getElementById('wiz-taux-tva').addEventListener('change', (e) => {
   state.wizard.tauxTVA = parseFloat(e.target.value) || 20;
+  updateAmountPreview();
 });
+
+// ─── Live Amount Preview ───────────────────────────────────────────────────────
+function updateAmountPreview() {
+  const ht = parseFloat(document.getElementById('wiz-montant-ht').value) || 0;
+  const preview = document.getElementById('amount-preview');
+
+  if (ht <= 0) {
+    preview.classList.add('hidden');
+    return;
+  }
+
+  preview.classList.remove('hidden');
+
+  const tvaOn = state.wizard.tvaApplicable;
+  const taux = state.wizard.tauxTVA || 20;
+  const tva = tvaOn ? +(ht * (taux / 100)).toFixed(2) : 0;
+  const ttc = tvaOn ? +(ht + tva).toFixed(2) : ht;
+
+  document.getElementById('prev-ht-live').textContent = formatEuro(ht);
+  document.getElementById('prev-ttc-live').textContent = formatEuro(ttc);
+
+  const tvaRow = document.getElementById('prev-tva-live-row');
+  const tvaNote = document.getElementById('prev-tva-note');
+
+  if (tvaOn) {
+    tvaRow.style.display = 'flex';
+    document.getElementById('prev-tva-live-label').textContent = `TVA (${taux}%)`;
+    document.getElementById('prev-tva-live').textContent = formatEuro(tva);
+    tvaNote.style.display = 'none';
+  } else {
+    tvaRow.style.display = 'none';
+    tvaNote.style.display = 'block';
+  }
+}
 
 document.getElementById('wiz-back-3').addEventListener('click', () => renderWizardStep(2));
 
@@ -952,6 +1015,8 @@ async function loadProfileView() {
   document.getElementById('prof-telephone').value = profile.telephone || '';
   document.getElementById('prof-iban').value = profile.rib_iban || '';
   document.getElementById('prof-email-display').textContent = state.user?.email || '';
+  // Sync SIRET counter with loaded value
+  document.getElementById('prof-siret').dispatchEvent(new Event('input'));
 
   try {
     const count = await checkAndResetMonthlyCount(state.user.uid);

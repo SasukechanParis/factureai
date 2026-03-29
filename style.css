@@ -1257,6 +1257,70 @@ textarea { resize: vertical; min-height: 96px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ─── SIRET Counter ─────────────────────────────────────────────────────────── */
+.siret-counter {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-light);
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transition);
+}
+
+.siret-counter.valid { color: var(--color-success); }
+.siret-counter.invalid { color: var(--color-danger); }
+
+.siret-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.4rem;
+  line-height: 1.4;
+}
+
+/* ─── Amount Preview (Step 3 live calculation) ───────────────────────────────── */
+.amount-preview {
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.amount-preview-title {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0.4rem 0.85rem;
+}
+
+.amount-preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.amount-preview-row:last-of-type { border-bottom: none; }
+
+.amount-preview-total {
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+.amount-preview-note {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  padding: 0.35rem 0.85rem 0.5rem;
+  font-style: italic;
+}
+
 /* ─── Utilities ─────────────────────────────────────────────────────────────── */
 .mt-1 { margin-top: 0.5rem; }
 .mt-2 { margin-top: 1rem; }
