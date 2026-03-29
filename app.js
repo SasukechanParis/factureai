@@ -101,7 +101,20 @@ function validateSIRET(siret) {
 
 // ─── View Navigation ──────────────────────────────────────────────────────────
 function showView(viewId) {
-  document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+  document.querySelectorAll('.view').forEach((v) => {
+    v.classList.remove('active');
+    // Remove any inline display that could override CSS (e.g. auth force-hide)
+    if (v.id !== 'login-screen') v.style.display = '';
+  });
+
+  // Always explicitly hide login screen when not showing it
+  const loginEl = document.getElementById('login-screen');
+  if (loginEl && viewId !== 'login-screen') {
+    loginEl.style.display = 'none';
+  } else if (loginEl && viewId === 'login-screen') {
+    loginEl.style.display = '';
+  }
+
   const view = document.getElementById(viewId);
   if (view) view.classList.add('active');
   state.currentView = viewId;
@@ -131,10 +144,21 @@ function closeModal(id) {
 
 // ─── Auth Flow ────────────────────────────────────────────────────────────────
 onAuthStateChanged(async (user) => {
+  console.log('Auth state changed:', user ? 'user logged in' : 'no user');
+
   if (!user) {
     showView('login-screen');
     return;
   }
+
+  // Force hide login screen immediately — belt-and-suspenders against CSS specificity issues
+  console.log('Hiding login screen');
+  const loginEl = document.getElementById('login-screen');
+  if (loginEl) {
+    loginEl.classList.remove('active');
+    loginEl.style.display = 'none';
+  }
+
   state.user = user;
 
   try {
