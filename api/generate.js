@@ -22,33 +22,22 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 1024,
         messages: [{
           role: 'user',
-          content: `Tu es un assistant comptable français expert. Rédige les lignes de description détaillées pour une ${documentType} professionnelle en français.
+          content: `Tu es un assistant comptable français expert. Génère une description professionnelle pour cette facture.
 
-Informations:
-- Vendeur: ${sellerName}, ${sellerAddress}, SIRET: ${sellerSiret}, Email: ${sellerEmail}
-- Client: ${clientName}, ${clientAddress}${clientSiret ? ', SIRET: ' + clientSiret : ''}
-- Montant HT: ${amount}€
-- Description du service: ${description}
-- Numéro de document: ${documentNumber}
-- Date d'émission: ${issueDate}
-- Date d'échéance: ${dueDate}
+Vendeur: ${sellerName || 'N/A'}
+Client: ${clientName || 'N/A'}
+Montant HT: ${amount || 0}€
+Description: ${description || 'Prestation de service'}
 
-Génère une description professionnelle et détaillée pour les lignes de la facture (2-3 lignes maximum). Sois concis et professionnel.
-
-Mentions légales obligatoires à inclure dans la réponse JSON:
-- Conditions de paiement
-- Pénalités de retard (taux légal en vigueur)
-- Indemnité forfaitaire recouvrement (40€)
-
-Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
+Réponds UNIQUEMENT avec ce JSON valide:
 {
-  "lines": ["ligne 1", "ligne 2"],
-  "paymentConditions": "Paiement à 30 jours",
-  "latePaymentPenalty": "En cas de retard de paiement, des pénalités de retard au taux légal en vigueur seront appliquées.",
+  "lines": ["Description détaillée de la prestation"],
+  "paymentConditions": "Paiement à 30 jours à réception de facture",
+  "latePaymentPenalty": "Pénalités de retard au taux légal en vigueur applicables.",
   "recoveryFee": "Indemnité forfaitaire pour frais de recouvrement: 40€"
 }`
         }]
@@ -56,8 +45,9 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      return res.status(500).json({ error: 'Claude API error', details: error });
+      const errorText = await response.text();
+      console.error('Anthropic API error:', response.status, errorText);
+      return res.status(500).json({ error: 'Claude API error', status: response.status, details: errorText });
     }
 
     const data = await response.json();
