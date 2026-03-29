@@ -417,14 +417,33 @@
     <!-- Toolbar -->
     <div class="preview-toolbar">
       <button class="btn btn-secondary btn-sm" id="btn-prev-back">← Retour</button>
-      <button class="btn btn-primary" id="btn-download-pdf" style="margin-left:auto;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        Télécharger en PDF
-      </button>
+      <div style="display:flex;gap:0.5rem;margin-left:auto;">
+        <button class="btn btn-secondary btn-sm" id="btn-mark-sent" style="display:none;">
+          ✉ Marquer comme envoyé
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-mark-paid" style="display:none;">
+          ✅ Marquer comme payé
+        </button>
+        <button class="btn btn-primary" id="btn-download-pdf">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Legal compliance banner -->
+    <div class="legal-banner" id="legal-banner">
+      ✅ Cette facture contient les 15 mentions légales obligatoires (art. L441-9 Code de commerce)
+    </div>
+
+    <!-- Status badge for opened-from-list docs -->
+    <div id="prev-status-bar" style="display:none;" class="prev-status-bar">
+      Statut : <span id="prev-status-badge" class="badge"></span>
+      <span id="prev-echeance-info" style="margin-left:0.75rem;font-size:0.8rem;"></span>
     </div>
 
     <!-- Invoice Preview Card -->
@@ -480,6 +499,33 @@
       <div class="invoice-legal" id="prev-legal"></div>
 
     </div><!-- /invoice-preview -->
+
+    <!-- Next steps panel (shown after generation) -->
+    <div class="next-steps-panel" id="next-steps-panel" style="display:none;">
+      <div class="next-steps-title">Que faire maintenant ?</div>
+      <div class="next-step-item" id="nsi-send">
+        <div class="nsi-icon">📧</div>
+        <div class="nsi-body">
+          <div class="nsi-label">Envoyer à votre client</div>
+          <div class="nsi-sub">Téléchargez le PDF et envoyez-le par email à <strong id="nsi-client-email"></strong></div>
+        </div>
+        <button class="btn btn-sm btn-secondary" id="btn-next-send">Envoyer →</button>
+      </div>
+      <div class="next-step-item">
+        <div class="nsi-icon">📅</div>
+        <div class="nsi-body">
+          <div class="nsi-label">Date d'échéance</div>
+          <div class="nsi-sub" id="nsi-echeance-text">Paiement attendu le —</div>
+        </div>
+      </div>
+      <div class="next-step-item" style="opacity:0.55;">
+        <div class="nsi-icon">🔔</div>
+        <div class="nsi-body">
+          <div class="nsi-label">Relance automatique <span class="badge badge-draft">Bientôt</span></div>
+          <div class="nsi-sub">Rappels automatiques si la facture n'est pas payée à l'échéance</div>
+        </div>
+      </div>
+    </div>
 
   </div>
 </div>

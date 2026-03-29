@@ -15,6 +15,7 @@ import {
   getDocuments,
   getRecentDocuments,
   saveDocument,
+  updateDocument,
   deleteDocument,
   getStats,
   checkAndResetMonthlyCount,
@@ -349,8 +350,8 @@ function renderRecentDocuments(docs) {
 }
 
 function statusLabel(status) {
-  const map = { draft: 'Brouillon', final: 'Finalisé', sent: 'Envoyé' };
-  return map[status] || 'Brouillon';
+  const map = { draft: 'Brouillon', final: 'Finalisé', sent: 'Envoyé', paid: '✓ Payé' };
+  return map[status] || 'Finalisé';
 }
 
 window.viewDocument = async function (docId) {
@@ -785,6 +786,99 @@ function renderPreview(docData) {
 
   // Store docData for PDF
   document._currentPreviewData = docData;
+
+  // ── Status toolbar buttons ──
+  const status = docData.status || 'final';
+  const btnSent = document.getElementById('btn-mark-sent');
+  const btnPaid = document.getElementById('btn-mark-paid');
+  btnSent.style.display = (status === 'final' || status === 'draft') ? 'inline-flex' : 'none';
+  btnPaid.style.display = (status === 'sent') ? 'inline-flex' : 'none';
+
+  // ── Status bar (only when opening from list, not freshly generated) ──
+  const statusBar = document.getElementById('prev-status-bar');
+  const statusBadge = document.getElementById('prev-status-badge');
+  const echeanceInfo = document.getElementById('prev-echeance-info');
+
+  if (docData.id && !state.wizard.savedDocId) {
+    // Opened from documents list
+    statusBar.style.display = 'flex';
+    statusBadge.className = `badge badge-${status}`;
+    statusBadge.textContent = statusLabel(status);
+    const echeanceDate = docData.date_echeance;
+    if (echeanceDate) {
+      const overdue = isOverdue(echeanceDate) && status !== 'paid';
+      echeanceInfo.textContent = overdue
+        ? `⚠️ Échéance dépassée (${formatDate(echeanceDate)})`
+        : `Échéance : ${formatDate(echeanceDate)}`;
+      echeanceInfo.style.color = overdue ? 'var(--color-danger)' : '';
+    }
+  } else {
+    statusBar.style.display = 'none';
+  }
+
+  // ── Next steps panel (shown after fresh generation) ──
+  const nextPanel = document.getElementById('next-steps-panel');
+  const isNewlyGenerated = !!state.wizard.savedDocId;
+  nextPanel.style.display = isNewlyGenerated ? 'block' : 'none';
+
+  if (isNewlyGenerated) {
+    const clientEmail = docData.client_snapshot?.email || '';
+    const emailEl = document.getElementById('nsi-client-email');
+    emailEl.textContent = clientEmail || 'votre client';
+
+    const echeanceStr = docData.date_echeance
+      ? `Paiement attendu le ${formatDate(docData.date_echeance)}`
+      : 'Date d\'échéance non définie';
+    document.getElementById('nsi-echeance-text').textContent = echeanceStr;
+
+    // "Envoyer" button triggers PDF download + shows mailto if email available
+    document.getElementById('btn-next-send').onclick = () => {
+      generatePDF(docData, state.profile || {});
+      if (clientEmail) {
+        const subject = encodeURIComponent(`Facture ${docData.numero}`);
+        const body = encodeURIComponent(`Bonjour,\n\nVeuillez trouver ci-joint la facture ${docData.numero}.\n\nCordialement,\n${state.profile?.nom_prenom || ''}`);
+        window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+      } else {
+        showToast('PDF téléchargé. Pensez à renseigner l\'email du client pour faciliter l\'envoi.', 'default', 5000);
+      }
+      // Auto-mark as sent after triggering send
+      markDocumentStatus(state.wizard.savedDocId, 'sent');
+    };
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function isOverdue(dateValue) {
+  if (!dateValue) return false;
+  const d = dateValue?.toDate ? dateValue.toDate() : new Date(dateValue);
+  return d < new Date();
+}
+
+async function markDocumentStatus(docId, newStatus) {
+  if (!docId) return;
+  try {
+    const updateData = { status: newStatus };
+    if (newStatus === 'sent') updateData.sent_at = new Date().toISOString();
+    if (newStatus === 'paid') updateData.paid_at = new Date().toISOString();
+    await updateDocument(state.user.uid, docId, updateData);
+
+    // Update current preview data in memory
+    if (document._currentPreviewData) {
+      document._currentPreviewData.status = newStatus;
+    }
+
+    // Update toolbar buttons
+    const btnSent = document.getElementById('btn-mark-sent');
+    const btnPaid = document.getElementById('btn-mark-paid');
+    btnSent.style.display = newStatus === 'sent' ? 'none' : 'inline-flex';
+    btnPaid.style.display = newStatus === 'sent' ? 'inline-flex' : 'none';
+
+    const labels = { sent: 'envoyée', paid: 'payée' };
+    showToast(`Facture marquée comme ${labels[newStatus] || newStatus}. ✓`, 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('Erreur lors de la mise à jour du statut.', 'error');
+  }
 }
 
 document.getElementById('btn-download-pdf').addEventListener('click', () => {
@@ -797,6 +891,16 @@ document.getElementById('btn-download-pdf').addEventListener('click', () => {
     console.error(err);
     showToast('Erreur lors de la génération du PDF.', 'error');
   }
+});
+
+document.getElementById('btn-mark-sent').addEventListener('click', () => {
+  const docId = state.wizard.savedDocId || document._currentPreviewData?.id;
+  if (docId) markDocumentStatus(docId, 'sent');
+});
+
+document.getElementById('btn-mark-paid').addEventListener('click', () => {
+  const docId = state.wizard.savedDocId || document._currentPreviewData?.id;
+  if (docId) markDocumentStatus(docId, 'paid');
 });
 
 document.getElementById('btn-prev-back').addEventListener('click', () => {
@@ -830,21 +934,33 @@ function renderDocumentsList(docs) {
     return;
   }
 
-  container.innerHTML = docs.map((doc) => `
-    <div class="list-item">
+  container.innerHTML = docs.map((doc) => {
+    const status = doc.status || 'final';
+    const overdue = isOverdue(doc.date_echeance) && status !== 'paid';
+    const statusClass = overdue ? 'badge-overdue' : `badge-${status}`;
+    const statusText = overdue ? '⚠️ En retard' : statusLabel(status);
+    const echeanceFmt = doc.date_echeance ? formatDate(doc.date_echeance) : '';
+
+    return `
+    <div class="list-item" onclick="viewDocument('${doc.id}')">
       <div class="list-item-icon facture">${doc.type === 'facture' ? '🧾' : '📋'}</div>
       <div class="list-item-body">
-        <div class="list-item-title">${doc.numero || '—'}</div>
-        <div class="list-item-sub">${doc.client_snapshot?.nom_entreprise || '—'} · ${formatDate(doc.date_emission)}</div>
+        <div class="list-item-title">${doc.numero || '—'} — ${doc.client_snapshot?.nom_entreprise || '—'}</div>
+        <div class="list-item-sub">
+          Émission ${formatDate(doc.date_emission)}
+          ${echeanceFmt ? `· Échéance ${echeanceFmt}` : ''}
+          · <span class="badge ${statusClass}">${statusText}</span>
+        </div>
       </div>
       <div class="list-item-right">
         <div class="list-item-amount">${formatEuro(doc.montant_ttc || doc.montant_ht)}</div>
-        <div style="display:flex;gap:4px;margin-top:4px;">
+        <div style="display:flex;gap:4px;margin-top:4px;" onclick="event.stopPropagation()">
           <button class="btn btn-sm btn-secondary" onclick="downloadDocPDF('${doc.id}')">PDF</button>
           <button class="btn btn-sm btn-danger" onclick="confirmDeleteDoc('${doc.id}')">🗑</button>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 // Search
