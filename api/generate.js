@@ -30,7 +30,7 @@ Réponds UNIQUEMENT avec ce JSON valide:
 }`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -43,7 +43,12 @@ Réponds UNIQUEMENT avec ce JSON valide:
 
     if (!response.ok) {
       const errorText = await response.text();
-      return res.status(500).json({ error: 'Gemini API error', details: errorText });
+      console.error('Gemini API error:', response.status, errorText);
+      return res.status(500).json({
+        error: 'Gemini API error',
+        status: response.status,
+        details: errorText
+      });
     }
 
     const data = await response.json();
